@@ -5,8 +5,12 @@ files, validate data integrity, and compute dataset statistics.
 """
 
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 import pandas as pd
+from scipy.sparse import spmatrix
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from src.utils.logger import get_logger
 
@@ -131,3 +135,67 @@ def validate_ratings(df: pd.DataFrame) -> dict:
         checks["sparsity"],
     )
     return checks
+
+
+def extract_genre_features(
+    movies: pd.DataFrame,
+) -> tuple[spmatrix, TfidfVectorizer]:
+    """Convert genre columns to TF-IDF weighted features.
+
+    Creates a text representation of each movie's genres and applies
+    TF-IDF vectorization to produce weighted feature vectors.
+
+    Args:
+        movies: DataFrame with binary genre columns.
+
+    Returns:
+        A tuple of (tfidf_matrix, fitted_vectorizer).
+    """
+    genre_cols = [c for c in movies.columns if c in GENRE_COLUMNS]
+    genre_strings = movies[genre_cols].apply(
+        lambda row: " ".join([col for col, val in row.items() if val == 1]),
+        axis=1,
+    )
+    # Handle empty genre strings
+    genre_strings = genre_strings.replace("", "unknown")
+
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(genre_strings)
+
+    logger.info(
+        "Extracted TF-IDF features: %d items x %d features",
+        tfidf_matrix.shape[0],
+        tfidf_matrix.shape[1],
+    )
+    return tfidf_matrix, vectorizer
+
+
+def save_processed_data(
+    train: pd.DataFrame,
+    test: pd.DataFrame,
+    movies: pd.DataFrame,
+    features: Any,
+    output_path: str,
+) -> None:
+    """Save processed datasets to disk in efficient formats.
+
+    Args:
+        train: Training ratings DataFrame.
+        test: Test ratings DataFrame.
+        movies: Movie metadata DataFrame.
+        features: Sparse or dense feature matrix.
+        output_path: Directory to save all processed files.
+    """
+    output = Path(output_path)
+    output.mkdir(parents=True, exist_ok=True)
+
+    train.to_parquet(output / "train.parquet")
+    test.to_parquet(output / "test.parquet")
+    movies.to_parquet(output / "movies.parquet")
+
+    if hasattr(features, "toarray"):
+        np.save(output / "item_features.npy", features.toarray())
+    else:
+        np.save(output / "item_features.npy", features)
+
+    logger.info("Saved processed data to %s", output)
