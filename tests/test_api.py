@@ -157,3 +157,65 @@ class TestRateEndpoint:
             json={"user_id": 1},
         )
         assert response.status_code == 422
+
+
+class TestABTestEndpoint:
+    """Tests for the /ab-test/results endpoint."""
+
+    def test_ab_results_no_simulator(self, test_client: TestClient) -> None:
+        """Returns 404 when no A/B test has been run."""
+        response = test_client.get("/ab-test/results")
+        assert response.status_code == 404
+
+    def test_ab_results_with_simulator(self, test_client: TestClient) -> None:
+        """Returns results when simulator is available."""
+        from src.models.ab_test import ABTestSimulator
+
+        class MockModel:
+            def recommend(self, user_id, user_ratings, n=10):
+                return [(1, 5.0), (2, 4.0)]
+
+        simulator = ABTestSimulator(models={"test": MockModel()})
+        simulator.simulate_user_session(
+            user_id=1,
+            user_train_ratings=[],
+            user_test_ratings=[(1, 5.0)],
+            n_recommendations=2,
+        )
+        app.state.ab_simulator = simulator
+
+        response = test_client.get("/ab-test/results")
+        assert response.status_code == 200
+        data = response.json()
+        assert "results" in data
+        assert len(data["results"]) == 1
+        assert data["results"][0]["variant"] == "test"
+
+        # Clean up
+        del app.state.ab_simulator
+
+
+class TestDependencies:
+    """Tests for the dependency injection functions."""
+
+    def test_get_recommender(self, test_client: TestClient) -> None:
+        """get_recommender returns the app state recommender."""
+        from unittest.mock import MagicMock
+
+        from src.api.dependencies import get_recommender
+
+        mock_request = MagicMock()
+        mock_request.app.state.recommender = "test_model"
+        result = get_recommender(mock_request)
+        assert result == "test_model"
+
+    def test_get_movies(self, test_client: TestClient) -> None:
+        """get_movies returns the app state movies dict."""
+        from unittest.mock import MagicMock
+
+        from src.api.dependencies import get_movies
+
+        mock_request = MagicMock()
+        mock_request.app.state.movies = {1: "Movie A"}
+        result = get_movies(mock_request)
+        assert result == {1: "Movie A"}
