@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from src.api.routes import rate, recommend, similar
+from src.api.routes import ab_test, rate, recommend, similar
 from src.api.schemas import HealthResponse
 from src.utils.database import get_user_ratings as db_get_user_ratings
 from src.utils.database import init_db
@@ -56,6 +56,7 @@ app = FastAPI(
 app.include_router(recommend.router)
 app.include_router(similar.router)
 app.include_router(rate.router)
+app.include_router(ab_test.router)
 
 
 @app.get("/health", response_model=HealthResponse)
