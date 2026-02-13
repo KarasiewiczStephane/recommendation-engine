@@ -1,7 +1,8 @@
-.PHONY: install test lint clean run docker
+.PHONY: install test lint clean run docker docker-up docker-down docker-build
 
 install:
 	pip install -r requirements.txt
+	pip install -e .
 
 test:
 	pytest tests/ -v --tb=short --cov=src
@@ -17,6 +18,14 @@ clean:
 run:
 	python -m src.main
 
+docker-build:
+	docker compose build
+
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down
+
 docker:
-	docker build -t $(shell basename $(CURDIR)) .
-	docker run -p 8000:8000 $(shell basename $(CURDIR))
+	docker compose up --build
