@@ -15,6 +15,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+pythonpath = ["."]
 
 [tool.coverage.run]
 source = ["src"]
