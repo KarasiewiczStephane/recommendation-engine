@@ -1,4 +1,4 @@
-.PHONY: install test lint clean run docker docker-up docker-down docker-build
+.PHONY: install test lint clean run docker docker-up docker-down docker-build dashboard download-data
 
 install:
 	pip install -r requirements.txt
@@ -29,3 +29,9 @@ docker-down:
 
 docker:
 	docker compose up --build
+
+dashboard:
+	streamlit run src/dashboard/app.py
+
+download-data:
+	python -c "from src.data.downloader import download_movielens; download_movielens()"

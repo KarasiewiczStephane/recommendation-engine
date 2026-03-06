@@ -4,27 +4,28 @@ A hybrid movie recommendation system built with collaborative filtering, content
 
 ## Features
 
-- **Collaborative Filtering** — SVD, SVDpp, NMF, and KNN-based matrix factorization via scikit-surprise
-- **Content-Based Filtering** — TF-IDF feature extraction with cosine similarity ranking
-- **Hybrid Model** — Weighted and switching strategies combining both approaches
-- **Cold-Start Handling** — Popularity-based recommendations for new users, content similarity for new items
-- **Evaluation Suite** — RMSE, MAE, Precision@K, Recall@K, NDCG@K with model comparison
-- **A/B Testing** — Simulation framework with CTR metrics and paired t-test significance testing
-- **REST API** — FastAPI endpoints for recommendations, similar items, and rating submission
-- **Redis Caching** — TTL-based caching with pattern-based invalidation
-- **Docker Support** — Multi-service Docker Compose with Redis
+- **Collaborative Filtering** -- SVD, SVDpp, NMF, and KNN-based matrix factorization via scikit-surprise
+- **Content-Based Filtering** -- TF-IDF feature extraction with cosine similarity ranking
+- **Hybrid Model** -- Weighted and switching strategies combining both approaches
+- **Cold-Start Handling** -- Popularity-based recommendations for new users, content similarity for new items
+- **Evaluation Suite** -- RMSE, MAE, Precision@K, Recall@K, NDCG@K with model comparison
+- **A/B Testing** -- Simulation framework with CTR metrics and paired t-test significance testing
+- **REST API** -- FastAPI endpoints for recommendations, similar items, and rating submission
+- **Redis Caching** -- TTL-based caching with pattern-based invalidation
+- **Streamlit Dashboard** -- Interactive visualization of ranking metrics, model comparison, A/B test results, and coverage analysis
+- **Docker Support** -- Multi-service Docker Compose with Redis
 
 ## Architecture
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   FastAPI     │────▶│  Hybrid      │────▶│ Collaborative│
+│   FastAPI     │────>│  Hybrid      │────>│ Collaborative│
 │   Endpoints   │     │  Recommender │     │ Filter (SVD) │
 └──────┬───────┘     └──────┬───────┘     └──────────────┘
        │                    │
-       │                    └────────────▶┌──────────────┐
+       │                    └────────────>┌──────────────┐
        │                                  │ Content-Based│
-       ▼                                  │ Filter (TF-IDF)│
+       v                                  │ Filter (TF-IDF)│
 ┌──────────────┐                          └──────────────┘
 │  Redis Cache │
 └──────────────┘     ┌──────────────┐
@@ -32,24 +33,47 @@ A hybrid movie recommendation system built with collaborative filtering, content
 ┌──────────────┐     │ Handler      │
 │  SQLite DB   │     └──────────────┘
 └──────────────┘
+                     ┌──────────────┐
+                     │  Streamlit   │
+                     │  Dashboard   │
+                     └──────────────┘
 ```
 
 ## Quick Start
 
-### Local Development
+### 1. Install dependencies
 
 ```bash
-# Clone the repository
 git clone git@github.com:KarasiewiczStephane/recommendation-engine.git
 cd recommendation-engine
+make install
+```
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -e .
+This runs `pip install -r requirements.txt` and `pip install -e .` (editable install).
 
-# Run the API server
+### 2. Download the MovieLens 100K dataset
+
+```bash
+make download-data
+```
+
+This downloads and extracts the MovieLens 100K dataset into `data/raw/ml-100k/`. The download is skipped if the data already exists. A small sample dataset is also included in `data/sample/ml-100k/` for testing.
+
+### 3. Launch the API server
+
+```bash
 make run
 ```
+
+The FastAPI server starts at [http://localhost:8000](http://localhost:8000). See the API Endpoints section below for usage.
+
+### 4. Launch the dashboard
+
+```bash
+make dashboard
+```
+
+Opens the Streamlit dashboard at [http://localhost:8501](http://localhost:8501), displaying ranking metrics, model accuracy comparison, A/B test CTR trends, and coverage/cold-start analysis.
 
 ### Docker
 
@@ -97,29 +121,38 @@ curl http://localhost:8000/health
 ```
 recommendation-engine/
 ├── src/
-│   ├── api/              # FastAPI application and routes
-│   │   ├── app.py        # App setup with lifespan management
-│   │   ├── routes/       # Endpoint handlers
-│   │   ├── cache.py      # Redis caching layer
-│   │   ├── schemas.py    # Pydantic request/response models
+│   ├── api/                 # FastAPI application and routes
+│   │   ├── app.py           # App setup with lifespan management
+│   │   ├── routes/          # Endpoint handlers
+│   │   │   ├── recommend.py
+│   │   │   ├── similar.py
+│   │   │   ├── rate.py
+│   │   │   └── ab_test.py
+│   │   ├── cache.py         # Redis caching layer
+│   │   ├── schemas.py       # Pydantic request/response models
 │   │   └── dependencies.py
-│   ├── data/             # Data loading and preprocessing
-│   │   ├── downloader.py # MovieLens dataset downloader
-│   │   ├── preprocessor.py # Ratings/movies loading, TF-IDF features
-│   │   └── splitter.py   # Temporal train/test split
-│   ├── models/           # Recommendation models
-│   │   ├── collaborative.py  # SVD/NMF/KNN collaborative filtering
-│   │   ├── content_based.py  # TF-IDF + cosine similarity
-│   │   ├── hybrid.py         # Weighted/switching hybrid
-│   │   ├── cold_start.py     # New user/item strategies
-│   │   ├── evaluator.py      # Metrics and model comparison
-│   │   └── ab_test.py        # A/B testing simulation
-│   ├── utils/            # Configuration, logging, database
-│   └── main.py           # Application entry point
-├── tests/                # Test suite (148 tests, 95% coverage)
-├── configs/              # YAML configuration
-├── data/sample/          # Sample MovieLens data for testing
-├── .github/workflows/    # CI/CD pipeline
+│   ├── data/                # Data loading and preprocessing
+│   │   ├── downloader.py    # MovieLens dataset downloader
+│   │   ├── preprocessor.py  # Ratings/movies loading, TF-IDF features
+│   │   └── splitter.py      # Temporal train/test split
+│   ├── models/              # Recommendation models
+│   │   ├── collaborative.py # SVD/NMF/KNN collaborative filtering
+│   │   ├── content_based.py # TF-IDF + cosine similarity
+│   │   ├── hybrid.py        # Weighted/switching hybrid
+│   │   ├── cold_start.py    # New user/item strategies
+│   │   ├── evaluator.py     # Metrics and model comparison
+│   │   └── ab_test.py       # A/B testing simulation
+│   ├── dashboard/
+│   │   └── app.py           # Streamlit dashboard entry point
+│   ├── utils/               # Configuration, logging, database
+│   └── main.py              # API server entry point (uvicorn)
+├── tests/                   # Test suite
+├── configs/
+│   └── config.yaml          # Model, Redis, API configuration
+├── data/
+│   └── sample/              # Sample MovieLens data for testing
+├── .github/workflows/
+│   └── ci.yml               # CI pipeline: lint, test, docker
 ├── Dockerfile
 ├── docker-compose.yml
 ├── Makefile
@@ -152,10 +185,10 @@ ruff format --check src/ tests/
 
 Application settings are in `configs/config.yaml`:
 
-- **Model hyperparameters** — SVD factors, learning rate, regularization
-- **Hybrid weights** — Alpha blending between collaborative and content-based
-- **Redis TTLs** — Cache expiration for recommendations and similarity results
-- **API settings** — Host, port configuration
+- **Model hyperparameters** -- SVD factors, learning rate, regularization
+- **Hybrid weights** -- Alpha blending between collaborative and content-based
+- **Redis TTLs** -- Cache expiration for recommendations and similarity results
+- **API settings** -- Host, port configuration
 
 Environment variables (`.env.example`):
 
@@ -165,6 +198,21 @@ REDIS_PORT=6379
 CONFIG_PATH=configs/config.yaml
 ```
 
+## Makefile Reference
+
+| Command | Description |
+|---------|-------------|
+| `make install` | Install dependencies and editable package |
+| `make run` | Start the FastAPI server |
+| `make dashboard` | Launch the Streamlit dashboard |
+| `make download-data` | Download the MovieLens 100K dataset |
+| `make test` | Run tests with coverage |
+| `make lint` | Lint and format with ruff |
+| `make docker` | Build and run all services |
+| `make docker-up` | Start services in detached mode |
+| `make docker-down` | Stop all services |
+| `make clean` | Remove __pycache__ and .pyc files |
+
 ## Tech Stack
 
 - **Python 3.11+** with type annotations
@@ -173,8 +221,9 @@ CONFIG_PATH=configs/config.yaml
 - **FastAPI** + **Uvicorn** for the REST API
 - **Redis** for caching with TTL
 - **SQLite** for persistent rating storage
+- **Streamlit** + **Plotly** for the interactive dashboard
 - **pandas** + **NumPy** for data processing
-- **pytest** with 95% code coverage
+- **pytest** for testing
 - **ruff** for linting and formatting
 - **Docker** + **Docker Compose** for containerization
 - **GitHub Actions** for CI/CD
