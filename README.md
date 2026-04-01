@@ -1,5 +1,7 @@
 # Recommendation Engine
 
+> Hybrid recommendation system combining collaborative filtering, content-based filtering, and cold-start strategies with A/B testing and Redis caching.
+
 A hybrid movie recommendation system built with collaborative filtering, content-based filtering, and cold-start strategies. Trained on the MovieLens 100K dataset with a FastAPI serving layer, Redis caching, and A/B testing simulation.
 
 ## Features
@@ -227,6 +229,10 @@ CONFIG_PATH=configs/config.yaml
 - **ruff** for linting and formatting
 - **Docker** + **Docker Compose** for containerization
 - **GitHub Actions** for CI/CD
+
+## Author
+
+**Stéphane Karasiewicz** — [skarazdata.com](https://skarazdata.com) | [LinkedIn](https://www.linkedin.com/in/stephane-karasiewicz/)
 
 ## License
 
